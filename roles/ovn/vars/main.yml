@@ -1,0 +1,17 @@
+# Define variables here for OVS installation
+#
+# Define this if you want to use something other than
+# the default. The default is https://github.com/openvswitch/ovs.git
+#ovs_repo: https://github.com/openvswitch/ovs.git
+#
+# Define this if you want to use something other than
+# the default. The default is "master"
+#ovs_branch: master
+#
+# Define this if you want to pass any extra arguments to
+# the configure script.
+# ovs_configure_options
+#
+# Define this if you want to pass any extra arguments to
+# make.
+# ovs_make_options

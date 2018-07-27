@@ -1,0 +1,32 @@
+- name: Copy RPMs to OVN node
+  synchronize:
+    src: /tmp/RPMS
+    dest: /tmp
+  when: ansible_hostname != 'localhost'
+
+# Using the "find" module might seem to make sense here, but it returns a dictionary
+# of values. Formatting this dictionary into a continuous string is probably possible,
+# but it is not obvious how to do it. Why do I want a continuous string? If you pass
+# the individual files to the "yum" module, then it runs yum once for each item
+# in turn. The "find" module does not return the files in any particular order.
+# This means that yum will run into dependency issues since you cannot put the
+# files in the proper order. By passing a single string to the "yum" module, it
+# is able to magically install the RPMs in the proper order and not run into
+# dependency issues.
+- name: Gather RPMs to actually install
+  shell: find /tmp/RPMS \( -name 'python*-openvswitch-2*.rpm' -o -name 'openvswitch-2*.rpm' -o -name 'openvswitch-ovn-common-2*.rpm' -o -name 'openvswitch-ovn-host-2*.rpm' -o -name 'openvswitch-ovn-central-2*.rpm' -o -name 'openvswitch-debuginfo-2*.rpm' -o -name 'openvswitch-ovn-common-debuginfo-2*.rpm' -o -name 'openvswitch-ovn-host-debuginfo-2*.rpm' -o -name 'openvswitch-ovn-central-debuginfo-2*.rpm' \)
+  register: install_rpms
+
+- name: Format RPM names
+  set_fact:
+    new_list: "{{ install_rpms.stdout | replace('\n', ',') }}"
+
+- name: Install OVS RPMs
+  yum:
+    name: "{{new_list}}"
+    state: latest
+
+- name: Clean up RPMs
+  file:
+    name: /tmp/RPMS/
+    state: absent
