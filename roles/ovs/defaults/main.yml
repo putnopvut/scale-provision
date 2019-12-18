@@ -1,0 +1,4 @@
+---
+ovs_repo: https://github.com/openvswitch/ovs.git
+ovs_branch: master
+ovs_configure_options: ''

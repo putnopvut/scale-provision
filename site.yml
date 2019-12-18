@@ -1,5 +1,15 @@
 ---
 - hosts:
+    - ovs-builder
+  roles:
+    - { role: ovs, action: build }
+
+- hosts:
+    - ovn-node
+  roles:
+    - { role: ovs, action: install }
+
+- hosts:
     - ovn-builder
   roles:
     - { role: ovn, action: build }
@@ -9,4 +19,3 @@
   roles:
     - rally_user
     - { role: ovn, action: install }
-

@@ -1,20 +1,20 @@
 - name: Install OVN Prerequisites
-  yum: name="gcc,make,python-devel,openssl,openssl-devel,graphviz,autoconf,automake,redhat-rpm-config,rpm-build,rpmdevtools,bash-completion,libtool,groff,libcap-ng-devel,python-twisted-core,selinux-policy-devel,python-six,desktop-file-utils,git,python-sphinx,python-twisted-web,firewalld-filesystem,unbound,unbound-devel" state=present
+  yum: name="gcc,make,python-devel,openssl,openssl-devel,graphviz,autoconf,automake,redhat-rpm-config,rpm-build,rpmdevtools,bash-completion,libtool,groff,libcap-ng-devel,selinux-policy-devel,python-six,desktop-file-utils,git,python-sphinx,firewalld-filesystem,unbound,unbound-devel" state=present
 
-- name: Clone OVS repository
+- name: Clone OVN repository
   git:
-    repo: "{{ovs_repo}}"
-    dest: '/git/ovs'
-    version: "{{ovs_branch}}"
+    repo: "{{ovn_repo}}"
+    dest: '/git/ovn'
+    version: "{{ovn_branch}}"
   register: git_repo
 
-- block:
-  - name: Stop if git checkout has not changed
-    debug:
-      msg: "OVS git checkout has not changed. Exiting"
-  
-  - meta: end_play
-  when: not git_repo.changed
+#- block:
+#  - name: Stop if git checkout has not changed
+#    debug:
+#      msg: "OVN git checkout has not changed. Exiting"
+#  
+#  - meta: end_play
+#  when: not git_repo.changed
 
 # Nothing below will execute unless the git checkout has
 # changed.
@@ -25,26 +25,26 @@
 - name: Initiate Build Numbering
   copy:
     content: '{ "release":"1" }'
-    dest: "/etc/ansible/facts.d/builder.fact"
+    dest: "/etc/ansible/facts.d/ovn_builder.fact"
     force: no
  
 - name: Get commit hash of HEAD
-  command: chdir=/git/ovs git rev-parse --short HEAD
+  command: chdir=/git/ovn git rev-parse --short HEAD
   register: git_hash
 
-- name: Bootstrap OVS build
-  command: chdir=/git/ovs ./boot.sh
+- name: Bootstrap OVN build
+  command: chdir=/git/ovn ./boot.sh
 
-- name: Run OVS configure script
-  command: chdir=/git/ovs ./configure
+- name: Run OVN configure script
+  command: chdir=/git/ovn ./configure "{{ovn_configure_options}}"
 
 - name: Create spec files and source tarball
   make:
-    chdir: /git/ovs
+    chdir: /git/ovn
     target: dist
 
-- name: Parse out Open vSwitch version from "configure.ac"
-  command: chdir=/git/ovs autoconf -t AC_INIT:'$2'
+- name: Parse out OVN version from "configure.ac"
+  command: chdir=/git/ovn autoconf -t AC_INIT:'$2'
   register: version
 
 - name: Set source directory for building
@@ -57,19 +57,19 @@
     state: directory
 
 - name: Copy source tarball to rpm dev tree
-  command: cp /git/ovs/openvswitch-{{version.stdout}}.tar.gz {{SOURCE}}
+  command: cp /git/ovn/ovn-{{version.stdout}}.tar.gz {{SOURCE}}
 
-- name: Unarchive openvswitch source tarball
+- name: Unarchive ovn source tarball
   unarchive:
-    src: "{{SOURCE}}/openvswitch-{{version.stdout}}.tar.gz"
+    src: "{{SOURCE}}/ovn-{{version.stdout}}.tar.gz"
     dest: "{{SOURCE}}"
     remote_src: yes
 
 - name: Update release number in spec files
   lineinfile:
-    path: "{{SOURCE}}/openvswitch-{{version.stdout}}/rhel/openvswitch-fedora.spec"
+    path: "{{SOURCE}}/ovn-{{version.stdout}}/rhel/ovn-fedora.spec"
     regexp: '^Release:'
-    line: "Release: {{ ansible_local.builder.release }}_{{ ovs_branch }}_{{ git_hash.stdout }}"
+    line: "Release: {{ ansible_local.ovn_builder.release }}_{{ ovn_branch }}_{{ git_hash.stdout }}"
 
 - name: Clear out old RPMs
   file:
@@ -77,14 +77,14 @@
     state: absent
 
 - name: Build OVN RPMs
-  shell: OVS_CFLAGS="-fno-omit-frame-pointer" rpmbuild -bb --without check rhel/openvswitch-fedora.spec
+  shell: OVN_CFLAGS="-fno-omit-frame-pointer" rpmbuild -bb --without check rhel/ovn-fedora.spec
   args:
-    chdir: "{{SOURCE}}/openvswitch-{{version.stdout}}"
+    chdir: "{{SOURCE}}/ovn-{{version.stdout}}"
 
 - name: Bump up Build Number
   copy:
-    content: '{ "release":"{{ansible_local.builder.release|int+1}}" }'
-    dest: "/etc/ansible/facts.d/builder.fact"
+    content: '{ "release":"{{ansible_local.ovn_builder.release|int+1}}" }'
+    dest: "/etc/ansible/facts.d/ovn_builder.fact"
 
 - name: Copy Built RPMs to local host
   synchronize:

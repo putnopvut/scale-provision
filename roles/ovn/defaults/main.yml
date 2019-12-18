@@ -1,4 +1,4 @@
 ---
-ovs_repo: https://github.com/openvswitch/ovs.git
-ovs_branch: master
-ovs_configure_options: ''
+ovn_repo: https://github.com/ovn-org/ovn.git
+ovn_branch: master
+ovn_configure_options: '--with-ovs-source=/git/ovs'
